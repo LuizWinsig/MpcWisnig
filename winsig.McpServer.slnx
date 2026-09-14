@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="winsig.McpServer.Tests/winsig.McpServer.Tests.csproj" />
+  <Project Path="winsig.McpServer/winsig.McpServer.csproj" />
+</Solution>

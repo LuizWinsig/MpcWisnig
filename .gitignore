@@ -1,0 +1,10 @@
+## .NET / Visual Studio
+bin/
+obj/
+publish/
+.vs/
+*.user
+
+## Logs
+*.log
+logs/
