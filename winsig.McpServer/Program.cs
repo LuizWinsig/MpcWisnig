@@ -89,7 +89,8 @@ builder.Services
         // See https://csharp.sdk.modelcontextprotocol.io/concepts/transports/transports.html for details.
         options.Stateless = true;
     })
-    .WithTools<RecognizedHoursTools>(mcpJsonOptions);
+    .WithTools<RecognizedHoursTools>(mcpJsonOptions)
+    .WithTools<UsersTools>(mcpJsonOptions);
 
 var app = builder.Build();
 
