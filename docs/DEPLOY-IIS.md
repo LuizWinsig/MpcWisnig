@@ -95,6 +95,67 @@ Substituir `<UTILIZADOR_PHC>` e `<PASSWORD_PHC>` pelos valores reais.
 
 > Alternativa manual: IIS Manager → aplicação `mcp` → **Configuration Editor** → `system.webServer/aspNetCore` → `environmentVariables`.
 
+### PHC REST API (comercial, utilizadores, contabilidade e health)
+
+Estas tools usam uma API separada do SOAP. O login e os tokens ficam internos ao
+servidor MCP; a autenticacao dos utilizadores no Entra permanece igual.
+
+| Tool | Permissao |
+|---|---|
+| `get_balancete` | `Phc.Read` |
+| `get_fluxo_caixa` | `Phc.Read` |
+| `get_phc_api_health` | `Phc.Read` |
+| `get_encomendas` | `Phc.Read` |
+| `get_encomendas_detalhe` | `Phc.Read` |
+| `get_utilizadores` | `Phc.Read` |
+| `criar_fatura_de_encomendas` | `Phc.Admin` |
+
+A execucao de scripts nao e exposta como tool MCP, incluindo para administradores.
+
+Configurar estas variaveis na aplicacao IIS, sem guardar segredos no repositorio:
+
+| Variavel | Valor |
+|---|---|
+| `PhcApi__BaseUrl` | `https://suporte.winsig.pt/PhcApi/` |
+| `PhcApi__Username` | Utilizador da API |
+| `PhcApi__Password` | Password da API |
+| `PhcApi__ApiKey` | Opcional, enviada como `X-API-Key` se configurada |
+| `PhcApi__TimeoutSeconds` | `100` por omissao |
+
+Em desenvolvimento, usar as mesmas chaves em user-secrets com `:` em vez de `__`.
+O URL base e a raiz `/PhcApi/`, **sem `/api/` no fim**: o cliente acrescenta
+`login`, `health`, `api/contabilidade/...`, `api/comercial/...` ou `api/utilizadores`.
+O login deve devolver `token` e `expiresAtUtc`; o token e reutilizado em memoria
+e renovado antes de expirar. HTTP 401 invalida a cache para a proxima chamada.
+Nao ha repeticao automatica de pedidos.
+
+`ano` e `mes` sao opcionais e, quando omitidos, nao sao enviados.
+As respostas de contabilidade sao JSON sem DTO de negocio, pois o OpenAPI nao
+descreve os seus campos; `health` tambem aceita `text/plain`.
+Comercial e utilizadores devolvem DTOs tipados no envelope `error`, `msg`, `data`;
+`error=true` e convertido num erro da tool.
+
+`get_encomendas` aceita `orderNumber`, `year` (1-9999), `clientNumber`, `clientName`,
+`startDate`, `endDate` e `isClosed`, todos opcionais. `get_encomendas_detalhe`
+aceita os mesmos filtros, mas com `orderNumbers` (array) em vez de `orderNumber`.
+Datas sao strings encaminhadas para a API; `isClosed=false` e enviado explicitamente.
+O array e enviado com chaves repetidas (`orderNumbers=1&orderNumbers=2`).
+`get_utilizadores` usa REST; a tool existente `get_users` continua a usar SOAP.
+
+`criar_fatura_de_encomendas` recebe `options` com `orders` (pelo menos uma encomenda),
+`getPDFPrintOut` (0 ou 1, omissao 0) e `closeOrder` (omissao false).
+Cada encomenda requer `OrderID` e pode conter `OrderLineID` (array de strings).
+Usar os identificadores `orderId`/`lineId` devolvidos pelas consultas, nao o numero
+da encomenda. O cliente envia `{ "options": { ... } }` para a API.
+A operacao cria faturas reais e pode fechar encomendas: obter confirmacao explicita
+do utilizador. As anotacoes MCP assinalam escrita nao idempotente; nao substituem
+as permissoes no servidor. Nao repetir apos timeout/erro sem confirmar no PHC se
+a fatura ja foi criada. Nao ha chamadas de faturacao real nos testes.
+
+Se o login funcionar mas os restantes endpoints devolverem 401, confirmar os
+requisitos de `X-API-Key` e as permissoes/configuracao do token na PhcApi.
+As credenciais locais de user-secrets nao sao publicadas para o IIS.
+
 ## 6. Verificar a instalação
 
 ```powershell

@@ -22,6 +22,17 @@ namespace winsig.McpServer.Models;
 [JsonSerializable(typeof(PhcEnvelope<List<RecognizedHoursEntry>>))]
 [JsonSerializable(typeof(PhcEnvelope<List<DetailRecognizedHoursEntry>>))]
 [JsonSerializable(typeof(PhcEnvelope<List<UserEntry>>))]
+[JsonSerializable(typeof(PhcApiLoginRequest))]
+[JsonSerializable(typeof(PhcApiLoginResponse))]
+[JsonSerializable(typeof(ExecutarScriptRequest))]
+[JsonSerializable(typeof(System.Text.Json.JsonElement))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(int[]))]
+[JsonSerializable(typeof(CriarFaturaPedidoDto))]
+[JsonSerializable(typeof(PhcEnvelope<List<DocumentoAbertoDto>>))]
+[JsonSerializable(typeof(PhcEnvelope<List<EncomendaDetalheDto>>))]
+[JsonSerializable(typeof(PhcEnvelope<CriarFaturaResultadoDto>))]
+[JsonSerializable(typeof(PhcEnvelope<List<UtilizadorDto>>))]
 public sealed partial class PhcJsonContext : JsonSerializerContext
 {
 }

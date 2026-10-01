@@ -1,9 +1,11 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.AspNetCore.Authentication;
 using ModelContextProtocol.Authentication;
+using ModelContextProtocol.Protocol;
+using System.Text.Json;
+using winsig.McpServer.Api;
 using winsig.McpServer.Configuration;
 using winsig.McpServer.Models;
 using winsig.McpServer.Soap;
@@ -27,11 +29,26 @@ builder.Services.AddHttpClient(PhcSoapClient.HttpClientName, (sp, client) =>
 
 builder.Services.AddSingleton<IPhcSoapClient, PhcSoapClient>();
 
+builder.Services.Configure<PhcApiOptions>(builder.Configuration.GetSection(PhcApiOptions.SectionName));
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddHttpClient(PhcApiClient.HttpClientName, (sp, client) =>
+{
+    var options = sp.GetRequiredService<IOptions<PhcApiOptions>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = false,
+    UseCookies = false
+})
+.RedactLoggedHeaders(["Authorization", "X-API-Key"]);
+builder.Services.AddSingleton<IPhcApiClient, PhcApiClient>();
+
 // Microsoft Entra ID (Office365) authentication.
 var entra = builder.Configuration.GetSection(EntraOptions.SectionName).Get<EntraOptions>() ?? new EntraOptions();
 builder.Services.Configure<EntraOptions>(builder.Configuration.GetSection(EntraOptions.SectionName));
 
-var serverUrl = builder.Configuration["McpServerUrl"] ?? "http://localhost:6194";
+var serverUrl = builder.Configuration["McpServerUrl"] ?? "https://localhost:5216";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -81,7 +98,26 @@ mcpJsonOptions.TypeInfoResolverChain.Add(PhcJsonContext.Default);
 
 // Add the MCP services: the transport to use (http) and the tools to register.
 builder.Services
-    .AddMcpServer()
+    .AddMcpServer(options =>
+    {
+        options.ServerInfo = new Implementation
+        {
+            Name = "winsig.McpServer",
+            Version = "1.0.0",
+            Title = "MCP Server da Winsig com ligação ao ERP PHC Cegid",
+            Description = "Servidor MCP da Winsig com ligação ao ERP PHC Cegid",
+            WebsiteUrl = "https://winsig.pt",
+            Icons =
+            [
+                new Icon
+                {
+                    Source = "https://suporte.winsig.pt/mcp/assets/logo.png",
+                    MimeType = "image/png",
+                    Sizes = ["128x128"]
+                }
+            ]
+        };
+    })
     .WithHttpTransport(options =>
     {
         // Stateless mode is recommended for servers that don't need
@@ -90,7 +126,8 @@ builder.Services
         options.Stateless = true;
     })
     .WithTools<RecognizedHoursTools>(mcpJsonOptions)
-    .WithTools<UsersTools>(mcpJsonOptions);
+    .WithTools<UsersTools>(mcpJsonOptions)
+    .WithTools<PhcApiTools>(mcpJsonOptions);
 
 var app = builder.Build();
 

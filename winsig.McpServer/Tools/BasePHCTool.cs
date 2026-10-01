@@ -32,18 +32,7 @@ public abstract class BasePHCTool
     /// <summary>Ensures the authenticated Office365 user has the given Entra app role.</summary>
     protected void RequireRole(string role)
     {
-        var user = HttpContextAccessor.HttpContext?.User;
-        if (user?.Identity?.IsAuthenticated != true)
-        {
-            throw new McpException("Access denied: request is not authenticated.");
-        }
-
-        if (!user.IsInRole(role))
-        {
-            var name = user.Identity?.Name ?? "unknown";
-            Logger.LogWarning("User {User} attempted to use a tool requiring role {Role}", name, role);
-            throw new McpException($"Access denied: user '{name}' does not have the required role '{role}'.");
-        }
+        ToolAuthorization.RequireRole(HttpContextAccessor.HttpContext?.User, Logger, role);
     }
 
     /// <summary>Gets the email of the authenticated Office365 user from the JWT claims.</summary>
